@@ -178,6 +178,44 @@
   .tools { display:flex; flex-wrap:wrap; gap:8px; margin-top:22px; padding-top:18px; border-top:1px solid var(--line); }
   .tools button { flex:1 1 40%; border:1px solid var(--line); background:var(--card); color:var(--ink); font-size:12.5px; font-weight:800; padding:11px 8px; border-radius:12px; cursor:pointer; }
   .tools button.danger { color:var(--out); }
+
+  /* AI 세무·자산 코치 */
+  .coach { padding:16px 18px; }
+  .coach .eyebrow { margin-bottom:10px; }
+  .coachhead { display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .coachbtn { border:1px solid var(--line); background:var(--tint); border-radius:10px; padding:6px 10px; font-size:12px; font-weight:700; color:var(--ink); cursor:pointer; white-space:nowrap; }
+  .dbar { height:8px; border-radius:99px; background:var(--chip); overflow:hidden; margin:10px 0 6px; position:relative; }
+  .dbar > i { display:block; height:100%; border-radius:99px; background:var(--fix); transition:width .35s ease; }
+  .dmeta { display:flex; justify-content:space-between; font-size:11.5px; font-weight:600; color:var(--muted); }
+  .dstat { display:flex; gap:8px; margin:12px 0 4px; }
+  .dstat > div { flex:1; background:var(--tint); border-radius:12px; padding:10px 10px; text-align:center; }
+  .dstat .k { font-size:10px; font-weight:700; color:var(--muted); }
+  .dstat .v { font-size:13.5px; font-weight:800; margin-top:3px; }
+  .coachnote { font-size:10.5px; color:var(--muted); font-weight:600; line-height:1.5; margin-top:10px; }
+  .instrow { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
+  .instrow:last-child { border-bottom:none; }
+  .instrow .nm { flex:1; min-width:0; font-size:13px; font-weight:700; }
+  .instrow .nm small { display:block; font-size:11px; color:var(--muted); font-weight:600; margin-top:1px; }
+  .instrow .amt2 { font-size:13px; font-weight:800; text-align:right; }
+  .instrow .amt2 small { display:block; font-size:10.5px; color:var(--muted); font-weight:700; }
+  .assetrow { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); cursor:pointer; }
+  .assetrow:last-child { border-bottom:none; }
+  .assetrow .ty { font-size:10px; font-weight:800; border-radius:6px; padding:2px 6px; flex-shrink:0; }
+  .ty.t현금 { background:#E7F3EC; color:var(--in); }
+  .ty.t예금 { background:#EAF0F6; color:var(--fix); }
+  .ty.t투자 { background:#FBF2DD; color:#9A6B12; }
+  .ty.t부채 { background:#FBEAE5; color:var(--out); }
+  .assetrow .nm { flex:1; min-width:0; font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .assetrow .am { font-size:13.5px; font-weight:800; }
+  .assetrow .am.debt { color:var(--out); }
+  .networth { display:flex; align-items:baseline; justify-content:space-between; margin:2px 0 6px; }
+  .networth .v { font-size:24px; font-weight:800; letter-spacing:-.01em; }
+  .typeseg { display:flex; gap:6px; margin-bottom:12px; }
+  .typeseg button { flex:1; border:1px solid var(--line); background:var(--card); color:var(--muted); font-size:12.5px; font-weight:800; padding:9px 0; border-radius:10px; cursor:pointer; }
+  .typeseg button.on { background:var(--ink); color:#fff; border-color:var(--ink); }
+  .kindseg { display:flex; gap:4px; }
+  .kindseg button { border:1px solid var(--line); background:var(--card); color:var(--muted); font-size:11px; font-weight:800; padding:0 10px; border-radius:8px; cursor:pointer; }
+  .kindseg button.on { background:var(--fix); color:#fff; border-color:var(--fix); }
   .toolsnote { width:100%; font-size:11px; color:var(--muted); font-weight:600; margin-top:4px; line-height:1.5; }
 
   .modal { position:fixed; inset:0; background:rgba(32,48,46,.42); display:flex; align-items:flex-end; justify-content:center; z-index:50; }
@@ -222,6 +260,10 @@ var OTHER_CATS = [
 var EXP_ALL = EXPENSE_CATS.concat(OTHER_CATS);
 var DOW = ["일","월","화","수","목","금","토"];
 var DAY_MS = 86400000;
+var APP_VERSION = "v8 (AI 세무·자산 코치)";
+// 카드 소득공제 제외 카테고리 (세금·공과금·통신비·관리비 등은 법상 공제 제외)
+var DEDUCT_EXCLUDE = ["공과금","세금","휴대폰요금","통신","관리비","대출·이자","월세·주거","보험","카드값"];
+var ASSET_TYPES = ["현금","예금","투자","부채"];
 function catIcon(t){ var arr=t.type==="income"?INCOME_CATS:(t.fixed?FIXED_CATS:EXP_ALL); for(var i=0;i<arr.length;i++){ if(arr[i].key===t.category) return arr[i].icon; } return "•"; }
 function won(n){ return Number(n||0).toLocaleString("ko-KR"); }
 function shortWon(n){ if(n>=10000){ var m=n/10000; return (m>=10?Math.round(m):Math.round(m*10)/10)+"만"; } return won(n); }
@@ -255,12 +297,48 @@ function payLabel(t){
 var mem=null;
 var store={ get:function(){ try{ var v=localStorage.getItem("budgetData"); return v?JSON.parse(v):mem; }catch(e){ return mem; } },
   set:function(v){ mem=v; try{ localStorage.setItem("budgetData",JSON.stringify(v)); }catch(e){} } };
-var state={ transactions:[], budget:0, cards:[], lastPay:{method:"cash",card:"",plan:"lump",months:3} };
+var state={ transactions:[], budget:0, cards:[], lastPay:{method:"cash",card:"",plan:"lump",months:3}, assets:[], salary:0 };
 var ui={ period:"week", refDate:Date.now(), view:"list", mode:"expense", editingBudget:false, budgetDraft:"", editId:null,
-  entryPay:null, eAddingCard:false, editPay:null, dAddingCard:false, showOther:false };
-(function(){ var s=store.get(); if(s){ state.transactions=s.transactions||[]; state.budget=s.weeklyBudget||s.budget||0; state.cards=s.cards||[]; state.lastPay=clonePay(s.lastPay); } })();
+  entryPay:null, eAddingCard:false, editPay:null, dAddingCard:false, showOther:false,
+  eCardKind:"credit", dCardKind:"credit", salaryEditing:false, assetSheet:null };
+function normCards(arr){ return (arr||[]).map(function(c){ return (typeof c==="string")?{name:c,kind:"credit"}:{name:c.name,kind:c.kind==="check"?"check":"credit"}; }); }
+(function(){ var s=store.get(); if(s){ state.transactions=s.transactions||[]; state.budget=s.weeklyBudget||s.budget||0; state.cards=normCards(s.cards); state.lastPay=clonePay(s.lastPay); state.assets=s.assets||[]; state.salary=s.salary||0; } })();
 ui.entryPay=clonePay(state.lastPay);
-function save(){ store.set({ transactions:state.transactions, weeklyBudget:state.budget, cards:state.cards, lastPay:state.lastPay }); }
+function save(){ store.set({ transactions:state.transactions, weeklyBudget:state.budget, cards:state.cards, lastPay:state.lastPay, assets:state.assets, salary:state.salary }); }
+function cardKind(name){ for(var i=0;i<state.cards.length;i++){ if(state.cards[i].name===name) return state.cards[i].kind; } return "credit"; }
+
+/* 올해 카드 소득공제 추정 (신용 15% / 체크·현금영수증 30%, 문턱=총급여 25%, 한도 300만/250만) */
+function yearlyDeduction(){
+  var y=new Date().getFullYear(); var s=new Date(y,0,1).getTime(); var e=Date.now();
+  var C=0,K=0,H=0; // 신용, 체크, 현금
+  state.transactions.forEach(function(t){
+    if(t.type!=="expense"||t.ts<s||t.ts>e||!t.pay) return;
+    if(DEDUCT_EXCLUDE.indexOf(t.category)>=0) return;
+    if(t.pay.method==="card"){ if(cardKind(t.pay.card)==="check") K+=t.amount; else C+=t.amount; }
+    else if(t.pay.method==="cash") H+=t.amount;
+  });
+  var total=C+K+H; var salary=state.salary; var T=Math.round(salary*0.25);
+  var limit=salary>70000000?2500000:3000000;
+  // 문턱은 공제율 낮은 신용카드 사용분부터 차감
+  var uC=Math.min(C,T), r=T-uC, uK=Math.min(K,r); r-=uK; var uH=Math.min(H,r);
+  var ded=Math.round((C-uC)*0.15+(K-uK)*0.30+(H-uH)*0.30);
+  var capped=Math.min(ded,limit);
+  return {C:C,K:K,H:H,total:total,threshold:T,limit:limit,deduction:capped,rawDeduction:ded,overThreshold:total>=T&&T>0};
+}
+/* 진행 중 할부 목록 */
+function activeInstallments(){
+  var now=new Date(); var list=[]; var monthly=0;
+  state.transactions.forEach(function(t){
+    if(t.type!=="expense"||!t.pay||t.pay.plan!=="installment"||!t.pay.months) return;
+    var d=new Date(t.ts);
+    var elapsed=(now.getFullYear()-d.getFullYear())*12+(now.getMonth()-d.getMonth());
+    var remain=t.pay.months-elapsed;
+    if(remain>0){ var per=Math.round(t.amount/t.pay.months); list.push({t:t,remain:remain,per:per}); monthly+=per; }
+  });
+  list.sort(function(a,b){return a.remain-b.remain;});
+  return {list:list,monthly:monthly};
+}
+function netWorth(){ var a=0,d=0; state.assets.forEach(function(x){ if(x.type==="부채") d+=x.amount; else a+=x.amount; }); return {assets:a,debt:d,net:a-d}; }
 
 /* 파생값 */
 function computeView(){
@@ -348,9 +426,9 @@ function payControlsHTML(pfx, pay){
      '<button class="'+(pay.method==="transfer"?"on":"")+'" data-'+pfx+'method="transfer">이체</button></div>';
   if(pay.method==="card"){
     h+='<div class="cardrow">';
-    state.cards.forEach(function(c){ h+='<button class="cardchip'+(pay.card===c?" on":"")+'" data-'+pfx+'card="'+esc(c)+'">'+esc(c)+'</button>'; });
+    state.cards.forEach(function(c){ h+='<button class="cardchip'+(pay.card===c.name?" on":"")+'" data-'+pfx+'card="'+esc(c.name)+'">'+esc(c.name)+(c.kind==="check"?" ✓체크":"")+'</button>'; });
     h+='<button class="cardadd" data-'+pfx+'addcard="1">＋ 카드</button></div>';
-    if(ui[pfx+"AddingCard"]) h+='<div class="cardaddrow"><input id="'+pfx+'cardinput" placeholder="카드 이름 (예: 신한)" /><button data-'+pfx+'savecard="1">추가</button></div>';
+    if(ui[pfx+"AddingCard"]) h+='<div class="cardaddrow"><input id="'+pfx+'cardinput" placeholder="카드 이름 (예: 신한)" /><div class="kindseg"><button class="'+(ui[pfx+"CardKind"]!=="check"?"on":"")+'" data-'+pfx+'kind="credit">신용</button><button class="'+(ui[pfx+"CardKind"]==="check"?"on":"")+'" data-'+pfx+'kind="check">체크</button></div><button data-'+pfx+'savecard="1">추가</button></div>';
     h+='<div class="planseg"><button class="'+(pay.plan!=="installment"?"on":"")+'" data-'+pfx+'plan="lump">일시불</button>'+
        '<button class="'+(pay.plan==="installment"?"on":"")+'" data-'+pfx+'plan="installment">할부</button></div>';
     if(pay.plan==="installment") h+='<div class="monthsrow"><input id="'+pfx+'months" inputmode="numeric" value="'+(pay.months||3)+'" /><span>개월</span></div>';
@@ -367,12 +445,82 @@ function attachPay(pfx, pay){
   root.querySelectorAll('[data-'+pfx+'method]').forEach(function(b){ b.onclick=function(){ pay.method=b.getAttribute("data-"+pfx+"method"); render(); }; });
   root.querySelectorAll('[data-'+pfx+'card]').forEach(function(b){ b.onclick=function(){ pay.card=b.getAttribute("data-"+pfx+"card"); render(); }; });
   var ab=document.querySelector('[data-'+pfx+'addcard]'); if(ab) ab.onclick=function(){ ui[pfx+"AddingCard"]=true; render(); };
-  var sb=document.querySelector('[data-'+pfx+'savecard]'); if(sb) sb.onclick=function(){ var el=document.getElementById(pfx+"cardinput"); var name=(el.value||"").trim(); if(name){ if(state.cards.indexOf(name)<0) state.cards.push(name); pay.card=name; save(); } ui[pfx+"AddingCard"]=false; render(); };
+  var sb=document.querySelector('[data-'+pfx+'savecard]'); if(sb) sb.onclick=function(){ var el=document.getElementById(pfx+"cardinput"); var name=(el.value||"").trim(); if(name){ var found=false; for(var i=0;i<state.cards.length;i++){ if(state.cards[i].name===name){ found=true; break; } } if(!found) state.cards.push({name:name,kind:ui[pfx+"CardKind"]==="check"?"check":"credit"}); pay.card=name; save(); } ui[pfx+"AddingCard"]=false; render(); };
+  root.querySelectorAll('[data-'+pfx+'kind]').forEach(function(b){ b.onclick=function(){ var el=document.getElementById(pfx+"cardinput"); var keep=el?el.value:""; ui[pfx+"CardKind"]=b.getAttribute("data-"+pfx+"kind"); render(); var el2=document.getElementById(pfx+"cardinput"); if(el2) el2.value=keep; }; });
   root.querySelectorAll('[data-'+pfx+'plan]').forEach(function(b){ b.onclick=function(){ pay.plan=b.getAttribute("data-"+pfx+"plan"); render(); }; });
   var mo=document.getElementById(pfx+"months"); if(mo) mo.oninput=function(){ var r=mo.value.replace(/[^0-9]/g,""); mo.value=r; pay.months=parseInt(r||"0",10)||1; };
 }
 
 /* HTML */
+/* AI 세무·자산 코치 카드 */
+function coachHTML(){
+  var h='<div class="card coach"><div class="coachhead"><div class="eyebrow">AI 세무·자산 코치</div>';
+  if(!ui.salaryEditing) h+='<button class="coachbtn" id="setsalary">'+(state.salary>0?"연봉 수정":"연봉 설정")+'</button>';
+  h+='</div>';
+  if(ui.salaryEditing){
+    h+='<div class="budedit"><input class="num" id="salaryinput" inputmode="numeric" placeholder="연봉·총급여 (원)" value="'+(state.salary?won(state.salary):"")+'" /><button id="savesalary">저장</button></div>'+
+       '<div class="budnote">세전 총급여 기준이에요. 카드 소득공제 시뮬레이션에 사용돼요.</div>';
+  } else if(state.salary<=0){
+    h+='<div class="fb tip"><span class="badge">💡</span><p>연봉(총급여)을 설정하면 올해 카드 사용액으로 <b>연말정산 카드 소득공제</b>를 실시간 시뮬레이션해 드려요.</p></div>';
+  } else {
+    var d=yearlyDeduction();
+    var pctT=d.threshold>0?Math.min(100,Math.round(d.total/d.threshold*100)):0;
+    // 공제 문턱 진행바
+    h+='<div class="dbar"><i style="width:'+pctT+'%"></i></div>'+
+       '<div class="dmeta num"><span>올해 공제대상 사용 '+won(d.total)+'원</span><span>문턱 '+won(d.threshold)+'원</span></div>';
+    h+='<div class="dstat"><div><div class="k">예상 소득공제</div><div class="v num">'+won(d.deduction)+'원</div></div>'+
+       '<div><div class="k">공제 한도</div><div class="v num">'+won(d.limit)+'원</div></div>'+
+       '<div><div class="k">신용/체크·현금</div><div class="v num">'+shortWon(d.C)+' / '+shortWon(d.K+d.H)+'</div></div></div>';
+    // 조언
+    if(!d.overThreshold){
+      h+='<div class="fb tip"><span class="badge">💡</span><p>아직 총급여 25% 문턱까지 <b>'+won(d.threshold-d.total)+'원</b> 남았어요. 이 구간은 공제가 안 되니 <b>혜택 좋은 신용카드</b>로 채우는 게 유리해요.</p></div>';
+    } else if(d.rawDeduction>=d.limit){
+      h+='<div class="fb warn"><span class="badge">!</span><p>기본 공제 한도('+won(d.limit)+'원)에 도달했어요. 이후 일반 사용분은 공제에 영향이 없어요. 전통시장·대중교통은 추가 한도가 있으니 그쪽을 활용해보세요.</p></div>';
+    } else {
+      h+='<div class="fb good"><span class="badge">✓</span><p>문턱을 넘었어요! 지금부터는 <b>체크카드·현금영수증(30%)</b>이 신용카드(15%)보다 두 배 유리해요. 남은 한도 '+won(d.limit-d.deduction)+'원.</p></div>';
+    }
+    h+='<div class="coachnote">간이 추정이에요. 세금·공과금·통신비 등 공제 제외 항목은 자동으로 뺐고, 현금은 현금영수증 발급을 가정했어요. 전통시장·대중교통 추가 한도, 개인별 상세 조건은 반영되지 않아요. 정확한 내용은 홈택스 연말정산 미리보기나 세무 전문가에게 확인하세요.</div>';
+  }
+  // 할부 현황
+  var inst=activeInstallments();
+  if(inst.list.length>0){
+    h+='<div style="margin-top:16px"><div class="eyebrow">진행 중 할부 · 월 '+won(inst.monthly)+'원</div>';
+    inst.list.forEach(function(x){
+      h+='<div class="instrow"><div class="nm">'+esc(x.t.category)+(x.t.pay.card?' <small>'+esc(x.t.pay.card)+(x.t.memo?" · "+esc(x.t.memo):"")+'</small>':'')+'</div>'+
+         '<div class="amt2 num">월 '+won(x.per)+'원<small>'+x.remain+'/'+x.t.pay.months+'개월 남음</small></div></div>';
+    });
+    h+='</div>';
+  }
+  // 자산
+  var nw=netWorth();
+  h+='<div style="margin-top:16px"><div class="coachhead"><div class="eyebrow">내 자산</div><button class="coachbtn" data-asset="new">＋ 자산 추가</button></div>';
+  if(state.assets.length===0){
+    h+='<div class="coachnote" style="margin-top:4px">현금·예금·투자·부채를 등록하면 순자산을 한눈에 볼 수 있어요.</div>';
+  } else {
+    h+='<div class="networth"><span class="eyebrow">순자산</span><span class="v num '+(nw.net<0?"debt":"")+'">'+won(nw.net)+'원</span></div>';
+    state.assets.forEach(function(a){
+      h+='<div class="assetrow" data-asset="'+a.id+'"><span class="ty t'+esc(a.type)+'">'+esc(a.type)+'</span><span class="nm">'+esc(a.name)+'</span><span class="am num'+(a.type==="부채"?" debt":"")+'">'+(a.type==="부채"?"-":"")+won(a.amount)+'원</span></div>';
+    });
+    if(nw.debt>0&&nw.assets>0) h+='<div class="coachnote">자산 '+won(nw.assets)+'원 · 부채 '+won(nw.debt)+'원 (부채비율 '+Math.round(nw.debt/nw.assets*100)+'%)</div>';
+  }
+  h+='</div></div>';
+  return h;
+}
+/* 자산 편집 시트 */
+function assetSheetHTML(){
+  if(!ui.assetSheet) return "";
+  var a=ui.assetSheet;
+  var isNew=!a.id;
+  var h='<div class="modal" id="assetmodal"><div class="sheet"><h3>💼 '+(isNew?"자산 추가":"자산 수정")+'</h3><div class="cx">이름·유형·현재 금액을 입력하세요</div>';
+  h+='<div class="typeseg">';
+  ASSET_TYPES.forEach(function(t){ h+='<button class="'+(a.type===t?"on":"")+'" data-atype="'+t+'">'+t+'</button>'; });
+  h+='</div>';
+  h+='<div class="field"><label>이름</label><input id="assetname" value="'+esc(a.name||"")+'" placeholder="예: 국민은행 예금, 주식계좌" /></div>';
+  h+='<div class="field"><label>금액</label><input id="assetamount" class="num" inputmode="numeric" value="'+(a.amount?won(a.amount):"")+'" placeholder="0" /></div>';
+  h+='<div class="actions"><button class="btn-save" id="assetsave">저장</button>'+(isNew?"":'<button class="btn-del" id="assetdel">삭제</button>')+'<button class="btn-cancel" id="assetcancel">취소</button></div></div></div>';
+  return h;
+}
+
 var FB_ICON={good:"✓",warn:"!",tip:"💡",info:"•"};
 function buildHTML(){
   var v=computeView(); var now=new Date();
@@ -417,6 +565,9 @@ function buildHTML(){
   buildFeedback(v).forEach(function(f){ html+='<div class="fb '+f.tone+'"><span class="badge">'+FB_ICON[f.tone]+'</span><p>'+esc(f.text)+'</p></div>'; });
   html+='</div>';
 
+  // AI 세무·자산 코치
+  html+=coachHTML();
+
   // 카테고리별
   if(v.byCat.length>0){
     html+='<div class="card breakdown"><div class="eyebrow">'+v.eyebrowPeriod+' 카테고리별</div><div class="bkhead num">변동 '+won(v.variable)+'원 · 고정 '+won(v.fixedTotal)+'원</div>';
@@ -437,7 +588,7 @@ function buildHTML(){
   }
 
   // 도구
-  html+='<div class="tools"><button data-tool="backup">백업 내보내기</button><button data-tool="restore">백업 복원</button><button data-tool="csv">CSV 내보내기</button><button data-tool="reset" class="danger">전체 초기화</button><div class="toolsnote">데이터는 이 기기에만 저장돼요. 기기를 바꾸거나 브라우저 데이터를 지우기 전에 백업을 내보내 두면 안전해요.</div></div>';
+  html+='<div class="tools"><button data-tool="backup">백업 내보내기</button><button data-tool="restore">백업 복원</button><button data-tool="csv">CSV 내보내기</button><button data-tool="reset" class="danger">전체 초기화</button><div class="toolsnote">데이터는 이 기기에만 저장돼요. 기기를 바꾸거나 브라우저 데이터를 지우기 전에 백업을 내보내 두면 안전해요. · '+APP_VERSION+'</div></div>';
 
   // 편집 시트
   if(ui.editId){
@@ -451,6 +602,7 @@ function buildHTML(){
         '<div class="actions"><button class="btn-save" id="editsave">저장</button><button class="btn-del" id="editdel">삭제</button><button class="btn-cancel" id="editcancel">취소</button></div></div></div>';
     }
   }
+  html+=assetSheetHTML();
   return html;
 }
 
@@ -487,7 +639,7 @@ function record(cat){
   var el=root.querySelector('[data-id="'+tx.id+'"]'); if(el){ el.classList.add("flash"); setTimeout(function(){ if(el) el.classList.remove("flash"); },1400); }
 }
 function download(filename,text,mime){ var blob=new Blob([text],{type:mime||"text/plain;charset=utf-8"}); var url=URL.createObjectURL(blob); var a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); },0); }
-function exportBackup(){ download("가계부-백업-"+todayStr()+".json", JSON.stringify({transactions:state.transactions,weeklyBudget:state.budget,cards:state.cards,lastPay:state.lastPay}), "application/json"); }
+function exportBackup(){ download("가계부-백업-"+todayStr()+".json", JSON.stringify({transactions:state.transactions,weeklyBudget:state.budget,cards:state.cards,lastPay:state.lastPay,assets:state.assets,salary:state.salary}), "application/json"); }
 function exportCSV(){
   var rows=state.transactions.slice().sort(function(a,b){return a.ts-b.ts;}).map(function(t){
     var d=dateStrOf(t.ts); var kind=t.type==="income"?"수입":"지출"; var fx=t.fixed?"고정":"";
@@ -501,7 +653,7 @@ var fileInput=document.getElementById("importfile");
 fileInput.onchange=function(){ var f=fileInput.files&&fileInput.files[0]; if(!f) return; var r=new FileReader();
   r.onload=function(){ try{ var data=JSON.parse(r.result); var txs=data.transactions; if(!Array.isArray(txs)) throw new Error("bad");
     if(!confirm("불러온 백업으로 현재 데이터를 덮어쓸까요?")){ fileInput.value=""; return; }
-    state.transactions=txs; state.budget=data.weeklyBudget||data.budget||0; state.cards=data.cards||state.cards; state.lastPay=clonePay(data.lastPay||state.lastPay); ui.entryPay=clonePay(state.lastPay); save(); render();
+    state.transactions=txs; state.budget=data.weeklyBudget||data.budget||0; state.cards=normCards(data.cards||state.cards); state.lastPay=clonePay(data.lastPay||state.lastPay); state.assets=data.assets||state.assets; state.salary=data.salary||state.salary; ui.entryPay=clonePay(state.lastPay); save(); render();
   }catch(e){ alert("백업 파일을 읽을 수 없어요. 올바른 백업(JSON) 파일인지 확인해주세요."); } fileInput.value=""; };
   r.readAsText(f);
 };
@@ -517,6 +669,31 @@ function attach(){
   root.querySelectorAll(".row").forEach(function(rw){ rw.onclick=function(){ var id=rw.dataset.id; var t=null; for(var i=0;i<state.transactions.length;i++){ if(state.transactions[i].id===id){ t=state.transactions[i]; break; } } ui.editId=id; ui.editPay=t?clonePay(t.pay):clonePay(); ui.dAddingCard=false; render(); }; });
   root.querySelectorAll("[data-del]").forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); var id=b.dataset.del; state.transactions=state.transactions.filter(function(t){return t.id!==id;}); save(); render(); }; });
   var setb=document.getElementById("setbud"); if(setb) setb.onclick=function(){ ui.editingBudget=true; ui.budgetDraft=state.budget?String(state.budget):""; render(); };
+
+  // 세무·자산 코치
+  var sal=document.getElementById("setsalary"); if(sal) sal.onclick=function(){ ui.salaryEditing=true; render(); };
+  var salsave=document.getElementById("savesalary"); if(salsave) salsave.onclick=function(){ var el=document.getElementById("salaryinput"); var v2=parseInt(el.value.replace(/[^0-9]/g,"")||"0",10)||0; state.salary=v2; ui.salaryEditing=false; save(); render(); };
+  var sali=document.getElementById("salaryinput"); if(sali) sali.oninput=function(){ var r=sali.value.replace(/[^0-9]/g,""); sali.value=r?Number(r).toLocaleString("ko-KR"):""; };
+  root.querySelectorAll("[data-asset]").forEach(function(b){ b.onclick=function(){
+    var id=b.getAttribute("data-asset");
+    if(id==="new"){ ui.assetSheet={id:null,name:"",type:"예금",amount:0}; }
+    else { for(var i=0;i<state.assets.length;i++){ if(state.assets[i].id===id){ var a=state.assets[i]; ui.assetSheet={id:a.id,name:a.name,type:a.type,amount:a.amount}; break; } } }
+    render(); }; });
+  var amodal=document.getElementById("assetmodal");
+  if(amodal){
+    amodal.onclick=function(e){ if(e.target===amodal){ ui.assetSheet=null; render(); } };
+    root.querySelectorAll("[data-atype]").forEach(function(b){ b.onclick=function(){ var n=document.getElementById("assetname"),m=document.getElementById("assetamount"); var kn=n?n.value:"", km=m?m.value:""; ui.assetSheet.type=b.getAttribute("data-atype"); render(); var n2=document.getElementById("assetname"),m2=document.getElementById("assetamount"); if(n2)n2.value=kn; if(m2)m2.value=km; }; });
+    var aam=document.getElementById("assetamount"); if(aam) aam.oninput=function(){ var r=aam.value.replace(/[^0-9]/g,""); aam.value=r?Number(r).toLocaleString("ko-KR"):""; };
+    var asv=document.getElementById("assetsave"); if(asv) asv.onclick=function(){
+      var name=(document.getElementById("assetname").value||"").trim();
+      var amt=parseInt(document.getElementById("assetamount").value.replace(/[^0-9]/g,"")||"0",10)||0;
+      if(!name){ document.getElementById("assetname").focus(); return; }
+      if(ui.assetSheet.id){ for(var i=0;i<state.assets.length;i++){ if(state.assets[i].id===ui.assetSheet.id){ state.assets[i].name=name; state.assets[i].type=ui.assetSheet.type; state.assets[i].amount=amt; break; } } }
+      else { state.assets.push({id:Date.now()+"-a"+Math.random().toString(36).slice(2,5),name:name,type:ui.assetSheet.type,amount:amt}); }
+      save(); ui.assetSheet=null; render(); };
+    var adl=document.getElementById("assetdel"); if(adl) adl.onclick=function(){ state.assets=state.assets.filter(function(a){return a.id!==ui.assetSheet.id;}); save(); ui.assetSheet=null; render(); };
+    var acl=document.getElementById("assetcancel"); if(acl) acl.onclick=function(){ ui.assetSheet=null; render(); };
+  }
   var saveb=document.getElementById("savebud"); if(saveb) saveb.onclick=function(){ var val=document.getElementById("budinput").value.replace(/[^0-9]/g,""); state.budget=parseInt(val||"0",10)||0; ui.editingBudget=false; save(); render(); };
   var bud=document.getElementById("budinput"); if(bud) bud.oninput=function(){ var r=bud.value.replace(/[^0-9]/g,""); bud.value=r?Number(r).toLocaleString("ko-KR"):""; };
   var amount=document.getElementById("amount"); if(amount) amount.oninput=function(){ var r=amount.value.replace(/[^0-9]/g,""); amount.value=r?Number(r).toLocaleString("ko-KR"):""; updateReady(); };
